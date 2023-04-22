@@ -1,5 +1,6 @@
-from flask import Flask, request, Response
 from datetime import datetime
+
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -25,6 +26,6 @@ def send_message():
     if not message:
         return {'error': 'Missing message field'}, 400
 
-    time = datetime.now().timestamp()
-    messages.append({'user': user, 'time': time, 'message': message})
+    timestamp = datetime.now().timestamp()
+    messages.append({'user': user, 'timestamp': timestamp, 'message': message})
     return {'success': True}, 201
