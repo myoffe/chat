@@ -1,66 +1,79 @@
 import os
 from datetime import datetime
 
-from flask import Flask, request
 from pymongo import MongoClient
 
-from common import CHAT_USER_HEADER
-
-# TODO global vars
 mongo_client = MongoClient(os.environ.get('MONGODB_URL'))
 database = mongo_client['chat']
 message_collection = database['messages']
 
-app = Flask(__name__)
+import eventlet
+import socketio
+
+sio = socketio.Server()
+app = socketio.WSGIApp(sio)
 
 
-def fetch_messages():
-    return message_collection.find({}, {'_id': False})
-
-
-def get_user():
-    return request.headers.get(CHAT_USER_HEADER)
+def fetch_messages(room):
+    return list(message_collection.find({'room': room}, {'_id': False}))
 
 
 def get_db_messages(db):
     return db['messages']
 
 
-@app.get('/messages')
-def get_messages():
-    try:
-        since = float(request.args.get('since', 0))
-    except ValueError:
-        since = 0
-
-    room = request.args.get('room')
-    if not room:
-        return {'error': 'missing room parameter'}, 400
-
-    messages = fetch_messages()
-
-    # TODO use mongo query
-    return [m for m in messages if m['timestamp'] > since and m['room'] == room]
+def push_messages(messages, room, skip_sid):
+    sio.emit('new_messages', data=messages, room=room, skip_sid=skip_sid)
 
 
 def persist_message(user, timestamp, message_text, room):
-    message_collection.insert_one({'user': user, 'timestamp': timestamp, 'message': message_text, 'room': room})
+    obj = {'user': user, 'timestamp': timestamp, 'message': message_text, 'room': room}
+    message_collection.insert_one(obj)
+    del obj['_id']
+    return obj
 
 
-@app.post('/messages')
-def send_message():
-    user = get_user()
+@sio.event
+def send_message(sid, data):
+    user = data.get('user')
     if not user:
-        return {'error': f'Missing username header ({CHAT_USER_HEADER})'}, 400
+        return 'missing user in request'
 
-    message_text = request.json.get('message')
+    message_text = data.get('message')
     if not message_text:
-        return {'error': 'Missing message field'}, 400
-
-    room = request.json.get('room')
-    if not room:
-        return {'error': 'Missing room name'}, 400
+        return 'missing message text'
 
     timestamp = datetime.now().timestamp()
-    persist_message(user, timestamp, message_text, room)
-    return {'success': True}, 201
+    room = [room for room in sio.rooms(sid) if room != sid].pop()
+    msg = persist_message(user, timestamp, message_text, room)
+    push_messages([msg], room, skip_sid=sid)
+
+
+@sio.event
+def enter_room(sid, data):
+    room = data.get('room')
+    if not room:
+        return 'missing room name'
+
+    print(f'Client {sid} entering room #{room}')
+
+    sio.enter_room(sid, room)
+
+    messages = fetch_messages(room)
+
+    # Send all previous messages in room to client
+    push_messages(messages, sid, None)
+
+
+@sio.event
+def connect(sid, environ):
+    print(f'Client {sid} connected')
+
+
+@sio.event
+def disconnect(sid):
+    print(f'Client {sid} disconnected')
+
+
+if __name__ == '__main__':
+    eventlet.wsgi.server(eventlet.listen(('', 5000)), app)

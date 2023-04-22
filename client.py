@@ -1,18 +1,18 @@
-import json
-import threading
+import asyncio
 from datetime import datetime
 from operator import itemgetter
 
+import aioconsole
 import click
-import requests
+import socketio
 
-from common import CHAT_USER_HEADER
+sio = socketio.AsyncClient()
 
 
 def format_msg(msg):
-    message, timestamp, user = itemgetter('message', 'timestamp', 'user')(msg)
+    message, timestamp, user, room = itemgetter('message', 'timestamp', 'user', 'room')(msg)
     time_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
-    return f'[{time_str}] {user}: {message}'
+    return f'[{time_str}] #{room} | {user}: {message}'
 
 
 def print_messages(messages):
@@ -20,15 +20,17 @@ def print_messages(messages):
         print(format_msg(msg))
 
 
-def prompt_and_send_messages(user, room, endpoint):
+async def prompt_and_send_messages(user, room):
     while True:
-        msg = input('[Send message] ')
+        msg = await aioconsole.ainput(f'#{room} > ')
         if not msg:
             continue
-        res = requests.post(endpoint, json={'message': msg, 'room': room}, headers={CHAT_USER_HEADER: user})
-        result = res.json()
-        if not result.get('success'):
-            print('Failed to send message. Error:', result.get('error'))
+
+        await sio.emit('send_message', data={'message': msg, 'user': user})
+
+
+def send_message_callback(error):
+    print('Failed to send message. Error:', error)
 
 
 @click.command()
@@ -36,21 +38,28 @@ def prompt_and_send_messages(user, room, endpoint):
 @click.option('--room', prompt='Room name')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
 def main(user, room, server):
-    endpoint = f'{server}/messages'
-
-    print(f'Room: #{room}')
-
-    fetch_messages_loop(endpoint, room, since=0)
-    prompt_and_send_messages(user, room, endpoint)
+    asyncio.run(start(user, room, server))
 
 
-def fetch_messages_loop(endpoint, room, since):
-    messages = requests.get(f'{endpoint}?since={since}&room={room}').json()
-    last_fetched_at = datetime.now().timestamp()
+async def start(user, room, server):
+    await sio.connect(server)
+    await sio.emit('enter_room', data={'room': room})
+    await prompt_and_send_messages(user, room)
 
-    print_messages(messages)
 
-    threading.Timer(1, fetch_messages_loop, [endpoint, room, last_fetched_at]).start()
+@sio.event
+async def connect():
+    print('Connection established')
+
+
+@sio.event
+async def disconnect():
+    print('Disconnected from server')
+
+
+@sio.event
+async def new_messages(data):
+    print_messages(data)
 
 
 if __name__ == '__main__':

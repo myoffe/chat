@@ -1,1 +1,0 @@
-CHAT_USER_HEADER = 'X-Chat-User'

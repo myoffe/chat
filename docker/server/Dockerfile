@@ -14,5 +14,5 @@ COPY . /app
 ENV FLASK_APP=server.py
 ENV FLASK_ENV=development
 
-CMD [ "poetry", "run", "python", "-m" , "flask", "run", "--host=0.0.0.0"]
+CMD [ "poetry", "run", "python", "server.py"]
 EXPOSE 5000

@@ -18,11 +18,14 @@ docker run chat-client
 
 ## TODOs
 ### Functional
-- [ ] Exclude user's own new messages from message fetching loop
-- [ ] Clean up message ordering
+- [X] Exclude user's own new messages from message fetching loop
+- [ ] Fix text prompt not seen properly after receiving messages
+- [X] Clean up debug prints
+- [ ] Handle reconnects gracefully
 
 ### Non-functional
 - [ ] Clean up code TODOs
+- [X] Use SocketIO rooms
 - [ ] Allow dockerized client to communicate with server
 - [ ] Extract common Dockerfile functionality
 - [ ] Separate projects or just the dependencies
