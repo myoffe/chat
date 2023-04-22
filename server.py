@@ -1,10 +1,10 @@
 from datetime import datetime
 
-import bcrypt
 import eventlet
 import socketio
 
 import db
+from auth import authenticate, register_user
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
@@ -53,29 +53,7 @@ def register(sid, data):
     if None in [username, password]:
         return False, 'Missing parameters'
 
-    user = db.fetch_user(username)
-    if user:
-        return False, 'User already exists'
-
-    print(f'Client {sid} wants to register with usersname {username}')
-
-    password_hash = hash_password(password)
-    db.add_user(username, password_hash)
-    print(f'Registered user {username}')
-
-    return True, ''
-
-
-def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(12))
-
-
-def authenticate(auth):
-    user, password = auth
-    user = db.fetch_user(user)
-    if not user:
-        return False
-    return bcrypt.checkpw(password.encode('utf-8'), user.get('password'))
+    return register_user(sid, username, password)
 
 
 @sio.event
