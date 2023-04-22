@@ -1,34 +1,17 @@
-import os
 from datetime import datetime
 
 import bcrypt
-from pymongo import MongoClient
-
-mongo_client = MongoClient(os.environ.get('MONGODB_URL'))
-database = mongo_client['chat']
-message_collection = database['messages']
-users_collection = database['users']
-
 import eventlet
 import socketio
+
+import db
 
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
 
 
-def fetch_all_messages_in_room(room):
-    return list(message_collection.find({'room': room}, {'_id': False}))
-
-
 def push_messages(messages, room, skip_sid):
     sio.emit('new_messages', data=messages, room=room, skip_sid=skip_sid)
-
-
-def persist_message(user, timestamp, message_text, room):
-    obj = {'user': user, 'timestamp': timestamp, 'message': message_text, 'room': room}
-    message_collection.insert_one(obj)
-    del obj['_id']
-    return obj
 
 
 @sio.event
@@ -43,7 +26,7 @@ def send_message(sid, data):
 
     timestamp = datetime.now().timestamp()
     room = [room for room in sio.rooms(sid) if room != sid].pop()
-    msg = persist_message(user, timestamp, message_text, room)
+    msg = db.persist_message(user, timestamp, message_text, room)
     push_messages([msg], room, skip_sid=sid)
     return True, ''
 
@@ -57,7 +40,7 @@ def enter_room(sid, data):
     print(f'Client {sid} entering room #{room}')
     sio.enter_room(sid, room)
 
-    messages = fetch_all_messages_in_room(room)
+    messages = db.fetch_all_messages_in_room(room)
 
     # Send all previous messages in room to client
     push_messages(messages, sid, None)
@@ -70,14 +53,14 @@ def register(sid, data):
     if None in [username, password]:
         return False, 'Missing parameters'
 
-    user = users_collection.find_one({'user': username})
+    user = db.fetch_user(username)
     if user:
         return False, 'User already exists'
 
     print(f'Client {sid} wants to register with usersname {username}')
 
     password_hash = hash_password(password)
-    users_collection.insert_one({'user': username, 'password': password_hash})
+    db.add_user(username, password_hash)
     print(f'Registered user {username}')
 
     return True, ''
@@ -89,7 +72,7 @@ def hash_password(password):
 
 def authenticate(auth):
     user, password = auth
-    user = users_collection.find_one({'user': user})
+    user = db.fetch_user(user)
     if not user:
         return False
     return bcrypt.checkpw(password.encode('utf-8'), user.get('password'))
