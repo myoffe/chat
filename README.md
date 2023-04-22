@@ -26,6 +26,7 @@ docker run chat-client
 - [ ] User seen message functionality
 - [ ] Informative 'invalid credenentials' error
 - [ ] "Event loop is closed" error when finishing registration
+- [ ] Don't require restarting client after registration (might be related to above)
 
 ### Non-functional
 - [ ] Clean up code TODOs

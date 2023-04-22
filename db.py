@@ -23,5 +23,5 @@ def fetch_user(username):
     return users.find_one({'user': username})
 
 
-def fetch_all_messages_in_room(room):
+def fetch_messages(room):
     return list(messages.find({'room': room}, {'_id': False}))

@@ -8,10 +8,12 @@ import socketio
 
 sio = socketio.AsyncClient()
 
+MESSAGE_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 
 def format_chat_message(msg):
     message, timestamp, user, room = itemgetter('message', 'timestamp', 'user', 'room')(msg)
-    time_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    time_str = datetime.fromtimestamp(timestamp).strftime(MESSAGE_DATE_FORMAT)
     return f'[{time_str}] #{room} | {user}: {message}'
 
 
@@ -25,6 +27,7 @@ async def join_room(user, room):
     while True:
         msg = await aioconsole.ainput(f'#{room} > ')
         if not msg:
+            # Ignore empty inputs
             continue
 
         success, error = await sio.call('send_message', data={'message': msg, 'user': user})
@@ -54,10 +57,10 @@ async def new_messages(data):
 @click.option('--room', prompt='Room name')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
 def main(register, user, password, room, server):
-    asyncio.run(start(register, user, password, room, server))
+    asyncio.run(start_client(register, user, password, room, server))
 
 
-async def start(register, user, password, room, server):
+async def start_client(register, user, password, room, server):
     if register:
         await sio.connect(server)
         success, error = await sio.call('register', data={'user': user, 'password': password})

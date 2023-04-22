@@ -10,7 +10,7 @@ sio = socketio.Server()
 app = socketio.WSGIApp(sio)
 
 
-def push_messages(messages, room, skip_sid):
+def push_messages(messages, room, skip_sid=None):
     sio.emit('new_messages', data=messages, room=room, skip_sid=skip_sid)
 
 
@@ -25,10 +25,14 @@ def send_message(sid, data):
         return False, 'missing message text'
 
     timestamp = datetime.now().timestamp()
-    room = [room for room in sio.rooms(sid) if room != sid].pop()
+    room = get_room(sid)
     msg = db.persist_message(user, timestamp, message_text, room)
     push_messages([msg], room, skip_sid=sid)
     return True, ''
+
+
+def get_room(sid):
+    return [room for room in sio.rooms(sid) if room != sid].pop()
 
 
 @sio.event
@@ -40,10 +44,10 @@ def enter_room(sid, data):
     print(f'Client {sid} entering room #{room}')
     sio.enter_room(sid, room)
 
-    messages = db.fetch_all_messages_in_room(room)
+    messages = db.fetch_messages(room)
 
     # Send all previous messages in room to client
-    push_messages(messages, sid, None)
+    push_messages(messages, sid)
 
 
 @sio.event
