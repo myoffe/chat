@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from common import CHAT_USER_HEADER
 
 # TODO global vars
-mongo_client = MongoClient(os.environ.get('MONGODB_URL' or 'MONGODB_URL=mongodb://localhost:9999/chat'))
+mongo_client = MongoClient(os.environ.get('MONGODB_URL'))
 database = mongo_client['chat']
 message_collection = database['messages']
 
