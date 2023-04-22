@@ -22,9 +22,14 @@ docker run chat-client
 - [ ] Fix text prompt not seen properly after receiving messages
 - [X] Clean up debug prints
 - [ ] Handle reconnects gracefully
+- [X] Authentication
+- [ ] User seen message functionality
+- [ ] Informative 'invalid credenentials' error
+- [ ] "Event loop is closed" error when finishing registration
 
 ### Non-functional
 - [ ] Clean up code TODOs
+- [ ] Avoid globals in server.py
 - [X] Use SocketIO rooms
 - [ ] Allow dockerized client to communicate with server
 - [ ] Extract common Dockerfile functionality

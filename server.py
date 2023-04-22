@@ -1,11 +1,13 @@
 import os
 from datetime import datetime
 
+import bcrypt
 from pymongo import MongoClient
 
 mongo_client = MongoClient(os.environ.get('MONGODB_URL'))
 database = mongo_client['chat']
 message_collection = database['messages']
+users_collection = database['users']
 
 import eventlet
 import socketio
@@ -62,8 +64,44 @@ def enter_room(sid, data):
 
 
 @sio.event
-def connect(sid, environ):
-    print(f'Client {sid} connected')
+def register(sid, data):
+    username = data.get('user')
+    password = data.get('password')
+    if None in [username, password]:
+        return False, 'Missing parameters'
+
+    user = users_collection.find_one({'user': username})
+    if user:
+        return False, 'User already exists'
+
+    print(f'Client {sid} wants to register with usersname {username}')
+
+    password_hash = hash_password(password)
+    users_collection.insert_one({'user': username, 'password': password_hash})
+    print(f'Registered user {username}')
+
+    return True, ''
+
+
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(12))
+
+
+def authenticate(auth):
+    user, password = auth
+    user = users_collection.find_one({'user': user})
+    if not user:
+        return False
+    return bcrypt.checkpw(password.encode('utf-8'), user.get('password'))
+
+
+@sio.event
+def connect(sid, environ, auth):
+    print(f'Client {sid} connecting')
+    if auth and not authenticate(auth):
+        raise ConnectionRefusedError('Authentication failed')
+
+    print(f'Client {sid} authenticated')
 
 
 @sio.event

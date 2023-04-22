@@ -20,18 +20,16 @@ def print_chat_messages(messages):
         print(format_chat_message(msg))
 
 
-async def prompt_and_send_messages(user, room):
+async def join_room(user, room):
+    await sio.emit('enter_room', data={'room': room})
     while True:
         msg = await aioconsole.ainput(f'#{room} > ')
         if not msg:
             continue
 
-        await sio.emit('send_message', data={'message': msg, 'user': user}, callback=send_message_callback)
-
-
-def send_message_callback(success, error):
-    if not success:
-        print('Failed to send message. Error:', error)
+        success, error = await sio.call('send_message', data={'message': msg, 'user': user})
+        if not success:
+            print('Failed to send message. Error:', error)
 
 
 @sio.event
@@ -50,17 +48,31 @@ async def new_messages(data):
 
 
 @click.command()
+@click.option('--register', is_flag=True, prompt='Do you want to register?')
 @click.option('--user', prompt='Username')
+@click.option('--password', prompt=True, hide_input=True)
 @click.option('--room', prompt='Room name')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
-def main(user, room, server):
-    asyncio.run(start(user, room, server))
+def main(register, user, password, room, server):
+    asyncio.run(start(register, user, password, room, server))
 
 
-async def start(user, room, server):
-    await sio.connect(server)
-    await sio.emit('enter_room', data={'room': room})
-    await prompt_and_send_messages(user, room)
+async def start(register, user, password, room, server):
+    if register:
+        await sio.connect(server)
+        success, error = await sio.call('register', data={'user': user, 'password': password})
+        if not success:
+            print('Registration failed. Error:', error)
+            return
+
+        print('Registration successful! Please restart client')
+
+    else:
+        try:
+            await sio.connect(server, auth=(user, password))
+            await join_room(user, room)
+        except Exception as e:
+            print('Failed to connect:', e)
 
 
 if __name__ == '__main__':
