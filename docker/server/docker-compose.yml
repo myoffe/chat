@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  chat-server:
+    image: chat-server
+    ports:
+      - "5000:5000"
+    environment:
+    - MONGODB_URL=mongodb://mongodb:27017/chat
+
+  mongo:
+    image: mongo:5

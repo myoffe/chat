@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# Build this from the top level project directory
 
 FROM python:3.9-slim-buster
 
