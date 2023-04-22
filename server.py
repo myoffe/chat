@@ -33,14 +33,18 @@ def get_messages():
     except ValueError:
         since = 0
 
+    room = request.args.get('room')
+    if not room:
+        return {'error': 'missing room parameter'}, 400
+
     messages = fetch_messages()
 
-    # TODO use mongo query?
-    return [m for m in messages if m['timestamp'] > since]
+    # TODO use mongo query
+    return [m for m in messages if m['timestamp'] > since and m['room'] == room]
 
 
-def persist_message(user, timestamp, message_text):
-    message_collection.insert_one({'user': user, 'timestamp': timestamp, 'message': message_text})
+def persist_message(user, timestamp, message_text, room):
+    message_collection.insert_one({'user': user, 'timestamp': timestamp, 'message': message_text, 'room': room})
 
 
 @app.post('/messages')
@@ -49,10 +53,14 @@ def send_message():
     if not user:
         return {'error': f'Missing username header ({CHAT_USER_HEADER})'}, 400
 
-    message_text = request.json.get('message', None)
+    message_text = request.json.get('message')
     if not message_text:
         return {'error': 'Missing message field'}, 400
 
+    room = request.json.get('room')
+    if not room:
+        return {'error': 'Missing room name'}, 400
+
     timestamp = datetime.now().timestamp()
-    persist_message(user, timestamp, message_text)
+    persist_message(user, timestamp, message_text, room)
     return {'success': True}, 201
