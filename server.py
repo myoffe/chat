@@ -13,7 +13,12 @@ def get_user():
 
 @app.get('/messages')
 def get_messages():
-    return messages
+    try:
+        since = float(request.args.get('since', 0))
+    except ValueError:
+        since = 0
+
+    return [m for m in messages if m['timestamp'] > since]
 
 
 @app.post('/messages')

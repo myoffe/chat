@@ -1,4 +1,4 @@
-import json
+import threading
 from datetime import datetime
 from operator import itemgetter
 
@@ -21,9 +21,16 @@ def print_messages(messages):
 @click.option('--user', prompt='Username')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
 def main(user, server):
-    now = datetime.now().timestamp()
-    messages = requests.get(f'{server}/messages').json()
+    fetch_messages_loop(server, since=0)
+
+
+def fetch_messages_loop(server, since):
+    messages = requests.get(f'{server}/messages?since={since}').json()
+    last_fetched_at = datetime.now().timestamp()
+
     print_messages(messages)
+
+    threading.Timer(1, fetch_messages_loop, [server, last_fetched_at]).start()
 
 
 if __name__ == '__main__':
