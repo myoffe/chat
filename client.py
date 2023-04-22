@@ -1,9 +1,12 @@
+import json
 import threading
 from datetime import datetime
 from operator import itemgetter
 
 import click
 import requests
+
+from common import CHAT_USER_HEADER
 
 
 def format_msg(msg):
@@ -17,20 +20,33 @@ def print_messages(messages):
         print(format_msg(msg))
 
 
+def prompt_and_send_messages(user, endpoint):
+    while True:
+        msg = input('[Send message] ')
+        if not msg:
+            continue
+        res = requests.post(endpoint, json={'message': msg}, headers={CHAT_USER_HEADER: user})
+        result = res.json()
+        if not result.get('success'):
+            print('Failed to send message. Error:', result.get('error'))
+
+
 @click.command()
 @click.option('--user', prompt='Username')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
 def main(user, server):
-    fetch_messages_loop(server, since=0)
+    endpoint = f'{server}/messages'
+    fetch_messages_loop(endpoint, since=0)
+    prompt_and_send_messages(user, endpoint)
 
 
-def fetch_messages_loop(server, since):
-    messages = requests.get(f'{server}/messages?since={since}').json()
+def fetch_messages_loop(endpoint, since):
+    messages = requests.get(f'{endpoint}?since={since}').json()
     last_fetched_at = datetime.now().timestamp()
 
     print_messages(messages)
 
-    threading.Timer(1, fetch_messages_loop, [server, last_fetched_at]).start()
+    threading.Timer(1, fetch_messages_loop, [endpoint, last_fetched_at]).start()
 
 
 if __name__ == '__main__':

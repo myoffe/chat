@@ -2,13 +2,15 @@ from datetime import datetime
 
 from flask import Flask, request
 
+from common import CHAT_USER_HEADER
+
 app = Flask(__name__)
 
 messages = []
 
 
 def get_user():
-    return request.headers.get('X-Chat-User')
+    return request.headers.get(CHAT_USER_HEADER)
 
 
 @app.get('/messages')
@@ -25,9 +27,9 @@ def get_messages():
 def send_message():
     user = get_user()
     if not user:
-        return {'error': 'Missing username header (X-Chat-User)'}, 400
+        return {'error': f'Missing username header ({CHAT_USER_HEADER})'}, 400
 
-    message = request.get_json().get('message', None)
+    message = request.json.get('message', None)
     if not message:
         return {'error': 'Missing message field'}, 400
 
