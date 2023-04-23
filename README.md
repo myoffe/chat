@@ -3,6 +3,7 @@
 ## Running
 
 ### Server
+
 ```
 cd <project dir>
 docker build . -t chat-server -f docker/server/Dockerfile
@@ -10,6 +11,7 @@ docker-compose -f docker/server/docker-compose.yml up
 ```
 
 ### Client
+
 ```
 cd <project dir>
 
@@ -23,8 +25,15 @@ docker run -it chat-client register --server http://host.docker.internal:5000
 docker run -it chat-client start --server http://host.docker.internal:5000
 ```
 
+## Notes & Limitations
+
+Sometimes the typing prompt might be obstructed by incoming messages.
+You can just press Enter to see the prompt, or just type whatever message you want, it will be sent.
+
 ## TODOs
+
 ### Functional
+
 - [X] "Event loop is closed" error when finishing registration
 - [ ] Informative 'invalid credenentials' error
 - [X] Exclude user's own new messages from message fetching loop
@@ -35,6 +44,7 @@ docker run -it chat-client start --server http://host.docker.internal:5000
 - [ ] User seen message functionality
 
 ### Non-functional
+
 - [X] Allow dockerized client to communicate with server
 - [ ] Clean up code TODOs
 - [ ] Avoid globals in server.py
