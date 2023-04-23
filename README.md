@@ -12,14 +12,17 @@ docker-compose -f docker/server/docker-compose.yml up
 
 ### Client
 
+#### Without docker
+
 ```
 cd <project dir>
-
-# Without docker
 poetry run python client.py register
 poetry run python client.py start
+```
 
-# With docker (tested only on Mac)
+#### With docker (tested only on Mac)
+
+```
 docker build . -t chat-client -f docker/client/Dockerfile
 docker run -it chat-client register --server http://host.docker.internal:5000
 docker run -it chat-client start --server http://host.docker.internal:5000
@@ -28,7 +31,8 @@ docker run -it chat-client start --server http://host.docker.internal:5000
 ## Notes & Limitations
 
 Sometimes the typing prompt might be obstructed by incoming messages.
-You can just press Enter to see the prompt, or just type whatever message you want, it will be sent.
+
+You can still type and it will send a message. Or just press Enter to make it visible.
 
 ## TODOs
 
@@ -42,12 +46,13 @@ You can just press Enter to see the prompt, or just type whatever message you wa
 - [ ] Handle reconnects gracefully
 - [X] Authentication
 - [ ] User seen message functionality
+- [ ] Prevent double login?
 
 ### Non-functional
 
 - [X] Allow dockerized client to communicate with server
-- [ ] Clean up code TODOs
-- [ ] Avoid globals in server.py
+- [X] Clean up code TODOs
+- [X] Avoid globals in server.py
 - [X] Use SocketIO rooms
 - [ ] Extract common Dockerfile functionality
 - [ ] Separate projects or just the dependencies
