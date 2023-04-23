@@ -50,33 +50,50 @@ async def new_messages(data):
     print_chat_messages(data)
 
 
+@click.group()
+def cli():
+    pass
+
+
 @click.command()
-@click.option('--register', is_flag=True, prompt='Do you want to register?')
 @click.option('--user', prompt='Username')
 @click.option('--password', prompt=True, hide_input=True)
-@click.option('--room', prompt='Room name')
 @click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
-def main(register, user, password, room, server):
-    asyncio.run(start_client(register, user, password, room, server))
+@click.option('--room', prompt='Room name')
+def start(user, password, server, room):
+    asyncio.run(start_client(user, password, room, server))
 
 
-async def start_client(register, user, password, room, server):
-    if register:
-        await sio.connect(server)
-        success, error = await sio.call('register', data={'user': user, 'password': password})
-        if not success:
-            print('Registration failed. Error:', error)
-            return
+@click.command()
+@click.option('--user', prompt='Username')
+@click.option('--password', prompt=True, hide_input=True)
+@click.option('--server', default='http://localhost:5000', help='Chat server endpoint')
+def register(user, password, server):
+    asyncio.run(register_user(user, password, server))
 
-        print('Registration successful! Please restart client')
 
+async def register_user(user, password, server):
+    await sio.connect(server)
+
+    success, error = await sio.call('register', data={'user': user, 'password': password})
+    if success:
+        print('Registration successful')
     else:
-        try:
-            await sio.connect(server, auth=(user, password))
-            await join_room(user, room)
-        except Exception as e:
-            print('Failed to connect:', e)
+        print('Registration failed. Error:', error)
 
+    await sio.disconnect()
+
+
+async def start_client(user, password, room, server):
+    try:
+        await sio.connect(server, auth=(user, password))
+        await join_room(user, room)
+    except Exception as e:
+        print('Failed to connect:', e)
+
+
+cli.add_command(start)
+cli.add_command(register)
 
 if __name__ == '__main__':
-    main()
+    cli()
